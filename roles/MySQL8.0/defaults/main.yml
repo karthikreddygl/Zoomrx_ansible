@@ -1,8 +1,8 @@
-sql_user= 'sqluser'
-root_db_pass = 'SQLadmin123'
-DB_user = 'sqldbuser'
-DB_user_password = 'SQLdbuser123'
-sql_authentication_plugin = 'cache_sha2_password'
-new_volume_mount_path = '/tmp/database/mysql'
-data_needs_to_be_moved = true
-work_on_prereq = true
+sql_user: 'sqluser'
+root_db_pass: 'SQLadmin123'
+DB_user: 'sqldbuser'
+DB_user_password: 'SQLdbuser123'
+sql_authentication_plugin: 'cache_sha2_password'
+new_volume_mount_path: '/tmp/database/mysql'
+data_needs_to_be_moved: true
+work_on_prereq: false

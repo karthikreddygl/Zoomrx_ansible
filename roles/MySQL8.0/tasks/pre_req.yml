@@ -1,0 +1,28 @@
+- name: 'prereq-adding user'
+  hosts: all
+  tasks:
+    - name: 'validating user'
+      shell: 'id {{ sql_user }}'
+      register: exists
+      ignore_errors: true
+
+    - name: 'adding user'
+      user: 
+        name: '{{ sql_user }}'
+        groups: 'sudo'
+        state: 'present'
+      when: exists.rc != 0
+
+    - name: 'enabling firewall in target'
+      shell: |
+        ufw allow openssh
+        ufw enable
+
+    - name: 'removing password of user in visudo'
+      lineinfile:
+        path: '/etc/sudoers'
+        line: '{{ sql_user }} ALL:(ALL) NOPASSWD: ALL'
+        state: 'present'
+
+    - name: 'clearing sudo cache'
+      shell: 'sudo -k'

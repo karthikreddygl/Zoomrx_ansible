@@ -1,0 +1,68 @@
+---
+# tasks file for MySQL8.0
+
+- include_tasks: 'pre_req.yml'
+  when: work_on_prereq
+
+- name: "Installing MYSQL on UBUNTU"
+  hosts: all
+  become_user: '{{ sql_user }}'
+  become_method: 'sudo'
+  tasks:
+    - name: 'installing sql server'
+      apt:
+        name: 'sql-server'
+        state: present
+      update_cache: yes
+
+    - name: 'starting mysql service'
+      systemd: 'mysql.service'
+        state: started
+
+    - name: 'running alter user command'
+      mysql_query: 
+        query: ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+
+    - name: 'running secure installation script'
+      expect:
+        command: 'mysql_secure_installation'
+        responses: 
+          Press y|Y for Yes, any other key for No: y
+          Please enter 0 = LOW, 1 = MEDIUM and 2 = STRONG: 2
+          New Password: '{{root_db_pass}}'
+          Re-enter new password: '{{root_db_pass}}'
+          Do you wish to continue with the password provided?(Press y|Y for Yes, any other key for No) : Y
+
+    - name: 'running alter user to go back to default authentication'
+      mysql_query:
+        query: 
+          - mysql -u root -p
+          - ALTER USER 'root'@'localhost' IDENTIFIED WITH auth_socket;
+
+    - name: 'creating non root admin user'
+      mysql_user: 
+        name: '{{DB_user}}'
+        password: '{{DB_user_password}}'
+        authentication_plugin: '{{sql_authentication_plugin}}'
+        host: localhost
+        priv: '*.*:ALL,GRANT'
+        state: present
+
+    - name: 'Testing the Db by checking the version'
+      mysql_info:
+        name: '{{DB_user}}'
+        password: '{{DB_user_password}}'
+        filter: version
+      register: mysql_version
+      debug:
+        var: mysql_version.version.
+
+
+- include_tasks: 'move_sql_mount.yml'
+  when: Data_needs_to_be_moved
+
+
+
+
+
+

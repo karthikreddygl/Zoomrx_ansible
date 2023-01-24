@@ -1,0 +1,60 @@
+-name: "moving the data drive of MYSQL"
+ hosts: all
+ become_user: '{{ sql_user }}'
+ become_method: 'sudo'
+ tasks:
+    - name: 'data directory check'
+      mysql_variables:
+        name: datadir
+      register: datapath
+      debug:
+        var: datapath.datadir
+
+    - name: 'stoping mysql'
+      systemd:
+        name: mysql
+        status: stopped
+
+    - name: 'copying contents and backing up the data'
+      shell: |
+       'rsync -av {{datapath.datadir}} {{new_volume_mount}}'
+       'rsync -av {{datapath.datadir}} {{datapath.datadir}}.bak'
+
+    - name: 'editing the data directory in mysql conf'
+      replace:
+        path: /etc/mysql/mysql.conf.d/mysqld.cnf
+        regexp: '{{datapath.datadir}}'
+        replace: '{{new_volume_mount}}'
+        backup: yes
+
+    - name: 'adding an alias rule in the apparmor'
+      lineinfile:
+        file: '/etc/apparmor.d/tunables/alias'
+        line: 'alias {{datapath.datadir}} -> {{new_volume_mount}}'
+        backup: yes
+
+    - name: 'restarting apparmor'
+      systemd:
+        name: apparmor
+        state: restarted
+
+    - name: 'creating databasepath'
+      file:
+        path: '{{datapath.datadir}}/mysql'
+        state: directory
+        recurse: yes
+
+    - name: 'restarting mysql'
+      systemd:
+        name: mysql
+        state: started
+
+    - name: 'modified data directory check'
+      mysql_variables:
+        name: datadir
+      register: datapath_modified
+      
+    - name: 'validating paths are same or not'
+      debug: 
+        msg: '{{datapath_modified}} is same as given {{new_volume_mount}}'
+      when: '{{datapath_modified}} == {{new_volume_mount}}'

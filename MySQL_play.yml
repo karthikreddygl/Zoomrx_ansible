@@ -1,0 +1,4 @@
+- name: "Role to install MySQL in Ubuntu target server"
+  hosts: 'ubuntu_db'
+  roles:
+    - role: 'MySQL8.0'
